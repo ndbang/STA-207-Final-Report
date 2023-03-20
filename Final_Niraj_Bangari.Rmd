@@ -1,0 +1,467 @@
+---
+title: "Visual Stimuli and Mouse Neural Activity"
+author: "Niraj Bangari"
+date: "March 20, 2023"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    number_sections: yes
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+
+```{r, include=FALSE}
+session=list()
+for(i in 1:5){
+  session[[i]]=readRDS(paste('./session',i,'.rds',sep=''))
+  print(session[[i]]$mouse_name)
+  print(session[[i]]$date_exp)
+  
+}
+
+```
+
+```{r}
+# Installs redres
+
+feedback=c(session[[1]]$feedback_type, session[[2]]$feedback_type, session[[3]]$feedback_type ,session[[4]]$feedback_type, session[[5]]$feedback_type)
+contrastL=c(session[[1]]$contrast_left, session[[2]]$contrast_left, session[[3]]$contrast_left ,session[[4]]$contrast_left, session[[5]]$contrast_left)
+contrastR=c(session[[1]]$contrast_right, session[[2]]$contrast_right, session[[3]]$contrast_right ,session[[4]]$contrast_right, session[[5]]$contrast_right)
+#time=c(length(session[[1]]$time), length(session[[2]]$time), length(session[[3]]$time), length(session[[4]]$time), length(session[[5]]$time))
+#neurons=c(dim(session[[1]]$spks), dim(session[[2]]$spks), dim(session[[3]]$spks), dim(session[[4]]$spks), dim(session[[5]]$spks[[id]]))
+
+#dim(session[[1]]$spks[[id]])
+
+# Obtain the firing rate 
+# averaged over [0,0.4] seconds since stim onsets
+# averaged across all neurons 
+
+ID=1
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate[i]=sum(session[[ID]]$spks[[i]])/n.neurons/t
+}
+
+
+ID=2
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate2=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate2[i]=sum(session[[ID]]$spks[[i]])/n.neurons/t
+}
+
+
+ID=3
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate3=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate3[i]=sum(session[[ID]]$spks[[i]])/n.neurons/t
+}
+
+
+ID=4
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate4=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate4[i]=sum(session[[ID]]$spks[[i]])/n.neurons/t
+}
+
+
+ID=5
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate5=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate5[i]=sum(session[[ID]]$spks[[i]])/n.neurons/t
+}
+
+firing_rate=c(firingrate,firingrate2,firingrate3,firingrate4,firingrate5)
+
+
+
+session_number=c()
+session_number[1:214]=1
+session_number[215:465]=2
+session_number[466:693]=3
+session_number[694:942]=4
+session_number[943:1196]=5
+
+my_data=data.frame(feedback, contrastL, contrastR, firing_rate, session_number)
+
+my_data$contrastL=as.factor(my_data$contrastL)
+my_data$contrastR=as.factor(my_data$contrastR)
+```
+# Abstract
+
+This report begins with a Background, that introduces the dataset and past insights gained from prior analysis. The next section is the Introduction, which presents the purpose of our report. The Descriptive Analysis section provides exploratory analysis on the variables in our dataset. The Inferential Analysis section answers our questions of interests, by running statistical tests using ANOVA in order to fit an effective model. The Sensitivity Analysis section analyses our model diagnostics. The Predictive Analysis section contains the training and testing process for our logistic regression model. The Discussion section concludes the analysis by summarizing the overall results of the report and directly answering the questions brought up in the introduction, and analyzes the impact of our results.
+
+
+# Background and Introduction
+
+The data in this report is from a study conducted by Steinmetz et al. (2019). This study investigated how the mouse brain processes information related to choices and actions, using experiments that were performed on a total of 10 mice over 39 different sessions.
+
+In the trials used for our report, visual stimuli from contrast levels ranging between 0 and 1 could appear on either side of the mice. These mice would then turn a wheel in the left direction, right direction, or neither, and would be rewarded in the form of water for making a correct choice. The activity of the neurons in the brain regions was measured throughout these experiments, and presented as spike trains. (Steinmetz, 3, 2019)
+
+Our data was provided to us in 5 different rds files corresponding to data from 5 different sessions, using two different mice from the above study. This data was cleaned into a data frame to be used for our report.
+
+In this report, we use various statistical methods such as ANOVA and GLM in order to address our primary question, how neurons in the visual cortex respond to the stimuli presented on the left and right, and our secondary question, how to predict the outcome of each trial using the neural activities and stimuli. The motivation of this analysis is to gain past insight on the study that has already been completed as well as gain future insight on possible trials in the future, using results from the study. 
+
+Our major factors of interest in our report for the first question are the mean firing rate, which will be our representation of neuron activity, the contrast levels for the left and right stimulus, and the session number, and the major factor of interest in the second question is the feedback outcome of each trial, which we will be predicting using a logistic regression model.
+
+# Descriptive Analysis
+
+
+```{r}
+head(my_data)
+
+```
+
+After compiling and cleaning our initial data, our variables are feedback, which takes two values indicating success or failure, contrastL and contrast R, which are the contrasts of the left and right stimulus, firing_rate, which is the mean firing rate, session_number, which indicates which session the trial occured in, and name, which refers to the name of the mouse used in the trial. Each row indicates a trial.
+
+# Univariate Analysis
+
+```{r}
+hist(firing_rate)
+summary(firing_rate)
+```
+
+The above shows the distribution of our mean firing rate amongst all the trials. One issue with our data frame is that each session contains varying numbers of neurons, which makes it unclear how to define our outcome variable, especially for our first question, in which we analyze how these neurons respond to the left and right stimulus. The mean firing rate is used to fix this issue for each session. It is calculated by taking the sum of the spikes for the trial, and dividing by the number of neurons over time. This gives us both a consistent outcome value that we can use to assess the activity of neurons in every trial, and also accounts for the inconsistencies in the number of neurons, as the formula divides by this number over time.
+
+```{r}
+hist(contrastL)
+hist(contrastR)
+hist(feedback)
+```
+
+These histograms confirm that contrastL and contrastR can only take 4 different values, so it is correct to treat these variables as factors for the rest of the report. In most cases, the values for both contrastL and contrastR were equal to 0, indicating that the majority of trials had either both or one of these contrast levels set equal to 0. 
+
+The histogram of the factor feedback shows that there were many more successfull trials than failures.
+
+## Multivariate Analysis
+
+```{r}
+library(ggplot2)
+
+ggplot(my_data, aes(x = contrastL, y = firing_rate)) +
+  geom_boxplot() +
+  ylab("Firing Rate") +
+  xlab("Contrast L")
+ggplot(my_data, aes(x = contrastR, y = firing_rate)) +
+  geom_boxplot() +
+  ylab("Firing Rate") +
+  xlab("Contrast R")
+```
+
+The boxplot shows that the firing rate differs slightly for each of the factor levels in both contrasts, but the distributions are otherwise similar. The next set of plots will take session into account, to see if this the relationship differs amongst this variable.
+
+```{r}
+
+ggplot(my_data, aes(x = contrastL, y = firing_rate)) + 
+  geom_point() +
+  stat_summary(fun.y = mean, geom = "line", aes(group = 1)) +
+  facet_wrap(~ session_number) + 
+  labs(x = "ContrastL", y = "Firing Rate", title = "Main Effect Plot")
+
+ggplot(my_data, aes(x = contrastR, y = firing_rate)) + 
+  geom_point() +
+  stat_summary(fun.y = mean, geom = "line", aes(group = 1)) +
+  facet_wrap(~ session_number) + 
+  labs(x = "ContrastR", y = "Firing Rate", title = "Main Effect Plot")
+
+
+```
+
+Similar to the boxplots, the distribution of the firing rate seems consistent for all of the constrasts, but seperating by each session demonstrates that there are clear differences among the main effect plots for each session.
+
+```{r}
+library(ggplot2)
+
+# Create a new data frame with the mean firing rate for each combination of fixed effects and session
+mean_firing_rate <- aggregate(firing_rate ~ session_number + contrastL + contrastR, data = my_data, FUN = mean)
+
+# Create the interaction plot using ggplot2
+ggplot(mean_firing_rate, aes(x = contrastL, y = firing_rate, color = contrastR)) +
+  geom_line(aes(group = interaction(contrastR, session_number)), size = 1) +
+  facet_wrap(~session_number, ncol = 3) +
+  xlab("ContrastL") +
+  ylab("Mean firing rate")
+
+
+```
+
+The lack of pattern in the interaction plots for each session indicate that this interaction term is significant. Furthermore, the plots in both the main effects and interaction terms indicate differences among each session, indicating that this random term should be included in the model.
+
+# Inferential Analysis
+
+## Model Choice 
+
+Our two way anova model will be as follows $$Y_ijk = μ + α_i + β_j + (αβ)_{ij} + γ_k + \epsilon_ijk$$, where the index $i$ represents the contrast of the left stimulus, the index $j$ represents the contrast of the right stimulus, and the index $k$ represents the level of our random session effect. The parameter $\alpha_{i}$ represents the factor effect of each group in the left contrast group, and the parameter $\beta_{j}$ represents the factor effect of each group in the right contrast group. The parameter $(αβ)_{ij}$ represenets the interaction effect between our two fixed effects, and $γ_k$ represnts the random effect of each session. $μ$ represents the overall mean and $\epsilon_{ijk}$ represents the error term. 
+
+Our parameter constraints are $\sum_{i=1}^a \alpha_i =0\\$, $\sum_{i=1}^a \beta_j =0\\$, $\sum_{i}\sum_{j}(αβ)_{ij}=0$, and $$E(γ_k) = 0$$ and $$ Var(γ_k) = σ_b^2$$. 
+
+
+## Hypothesis Testing for Effects
+
+The significance level for our tests will be 0.01.
+
+Test for the main effect for Factor A(contrastL)
+$H_0: \alpha_{i}=0 \ \ \forall i \ \ \  {\rm v.s.}\ \  \ H_A:\  {\rm not \ all \ } \alpha_i \ {\rm are \ zero}.$
+
+Test for the main effect for Factor B(contrastR)
+
+$H_0: \beta_{j}=0 \ \ \forall i \ \ \  {\rm v.s.}\ \  \ H_A:\  {\rm not \ all \ } \beta_j \ {\rm are \ zero}.$
+
+Test for the interaction effect 
+$H_0: (αβ)_{ij}=0 \ \ \forall i \ \ \  {\rm v.s.}\ \  \ H_A:\  {\rm not \ all \ } (αβ)_{ij} \ {\rm are \ zero}.$
+
+For this test, we must assume independence, normality, and equal variance of the responses for each Factor.
+
+```{r}
+library(lmerTest)
+my_fit<- lmerTest::lmer(firing_rate ~ contrastL*contrastR+(1 | session_number), data = my_data)
+anova(my_fit)
+
+```
+
+The p-values for all the fixed effects are significant at a level of alpha = 0.05 in the anova table for the fitted model. Although it can be inferred for our question of interest that both the contrasts and the interaction effect are significant predictors of neural activity, it is now essential to test whether the model must contain our random session effect and our interaction term.
+
+## Hypothesis Testing for Interaction and Session (Full vs Reduced Model)
+
+Test for Full Model vs Reduced Model
+
+$H_0: \text{There is no difference between the full and reduced model}  \ H_A:\text{The full model is a better fit than the reduced model}.$
+
+```{r}
+my_fit1 = lmer(firing_rate ~ contrastL*contrastR+(1 | session_number), data = my_data)
+my_fit2= lm(firing_rate ~ contrastL*contrastR, data = my_data)
+anova(my_fit1, my_fit2)
+
+```
+
+The p-value is very significant, which allows us to reject the null hypothesis, approve the full model with session number, and conclude that session number is a significant random effect.
+
+
+```{r}
+my_fit1 = lmer(firing_rate ~ contrastL+contrastR+(1 | session_number), data = my_data)
+my_fit2= lmer(firing_rate ~ contrastL*contrastR+(1 | session_number), data = my_data)
+anova(my_fit2, my_fit1)
+
+```
+
+The p-value is significant, which allows us to reject the null hypothesis, approve the full model with the interaction effect and conclude that our interaction term is significant to our model.
+
+
+# Model Diagnostics
+
+```{r}
+plot(my_fit)
+qqnorm(resid(my_fit))
+qqline(resid(my_fit))
+```
+
+The model assumptions for epsilon are held through both of these diagnostic plots. Our fitted values vs residuals plot shows a consistent spread of the residuals indicating equal variance, and the qqnorm plot shows very little deviation from the qqline, indicating strong normality. 
+
+# Sensitivity Analysis
+
+In this section, instead of using the mean firing rate as neuron activity, the maximum summary statistic will be used instead, which will represent the highest spike activity during the session.
+
+```{r}
+# Installs redres
+
+feedback=c(session[[1]]$feedback_type, session[[2]]$feedback_type, session[[3]]$feedback_type ,session[[4]]$feedback_type, session[[5]]$feedback_type)
+contrastL=c(session[[1]]$contrast_left, session[[2]]$contrast_left, session[[3]]$contrast_left ,session[[4]]$contrast_left, session[[5]]$contrast_left)
+contrastR=c(session[[1]]$contrast_right, session[[2]]$contrast_right, session[[3]]$contrast_right ,session[[4]]$contrast_right, session[[5]]$contrast_right)
+#time=c(length(session[[1]]$time), length(session[[2]]$time), length(session[[3]]$time), length(session[[4]]$time), length(session[[5]]$time))
+#neurons=c(dim(session[[1]]$spks), dim(session[[2]]$spks), dim(session[[3]]$spks), dim(session[[4]]$spks), dim(session[[5]]$spks[[id]]))
+
+#dim(session[[1]]$spks[[id]])
+
+# Obtain the firing rate 
+# averaged over [0,0.4] seconds since stim onsets
+# averaged across all neurons 
+
+ID=1
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate[i]=max(session[[ID]]$spks[[i]])
+}
+
+ID=2
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate2=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate2[i]=max(session[[ID]]$spks[[i]])
+}
+
+
+ID=3
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate3=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate3[i]=max(session[[ID]]$spks[[i]])
+}
+
+
+ID=4
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate4=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate4[i]=max(session[[ID]]$spks[[i]])
+}
+
+
+ID=5
+t=0.4 # from Background 
+
+n.trials=length(session[[ID]]$spks)
+n.neurons=dim(session[[ID]]$spks[[1]])[1]
+
+# Obtain the firing rate 
+firingrate5=numeric(n.trials)
+for(i in 1:n.trials){
+  firingrate5[i]=max(session[[ID]]$spks[[i]])
+}
+
+firing_rate=c(firingrate,firingrate2,firingrate3,firingrate4,firingrate5)
+
+
+
+session_number=c()
+session_number[1:214]=1
+session_number[215:465]=2
+session_number[466:693]=3
+session_number[694:942]=4
+session_number[943:1196]=5
+
+my_data2=data.frame(feedback, contrastL, contrastR, firing_rate, session_number)
+
+my_data2$contrastL=as.factor(my_data$contrastL)
+my_data2$contrastR=as.factor(my_data$contrastR)
+
+head(my_data2)
+```
+
+```{r}
+library(lmerTest)
+my_fit<- lmerTest::lmer(firing_rate ~ contrastL*contrastR+(1 | session_number), data = my_data2)
+anova(my_fit)
+```
+
+Based on the results of the anova model, the contrastL and interaction term are significantly less useful to the model, indicating that mean firing rate is a better outcome variable to assess a realtionship between the visual stimuli and mouse neural activity.
+
+# Predictive Analysis
+ 
+```{r}
+library(caTools)
+library(caret)
+set.seed(123)
+
+
+my_data$name <- ifelse(my_data$session %in% c(1, 2, 3), "Cori", "Forssmann")
+my_data$feedback[my_data$feedback == -1] = 0
+#split = sample.split(bwt$low, SplitRatio = 0.7) # use 70% of dataset as training set and 30% 6s test set
+my.train = my_data[101:1196,]
+my.test = my_data[1:100,]
+
+#my_fit.train = glm(feedback ~ contrastL + contrastR + firing_rate+session_number+name, family=binomial(), data = my.train)
+my_fit.train = glm(feedback ~ contrastL + contrastR + firing_rate+session_number+name, family=binomial(), data = my.train)
+```
+
+Our logistic model contains both contrasts for the stimulus, the mean firing rate, the session number, and the name of the mouse to predict the feedback. Since the area under an ROC curve measures the overall model performance, in order to find the best threshold, we will plot an ROC curve and find the point where this area is maximized.
+
+```{r}
+library(pROC)
+
+# Create ROC curve
+roc_data <- roc(my_fit.train$y, my_fit.train$fitted.values)
+
+# Plot ROC curve
+plot(roc_data, print.thres = "best")
+```
+
+```{r}
+threshold = 0.656 #pick a threshold
+predicted_values = ifelse(predict(my_fit.train, newdata = my.test)>threshold,1,0)
+actual_values = my.test$feedback
+conf_matrix = table(predicted_values, actual_values)
+accuracy <- (conf_matrix[1,1] + conf_matrix[2,2]) / sum(conf_matrix)
+accuracy
+```
+
+With a threshold of 0.656, which maximizes the area under the ROC curve, our best model has a specificity of 0.657 and 0.647. This indicates a high number of true positives and true negatives in our predictive model, which means our model more often than not correctly identifies both positive and negative cases. This model was also able to correctly predict 65/100 of the observations based on our confusion matrix.
+
+
+# Discussion and Conclusion
+
+Our questions of interest in this project revolved around seeing if neurons in the visual cortex respond to the stimuli presented on the left and right, and if it was possible to predict the outcome of each trial using the neural activities and stimuli. The dataset, which was originally combined raw data from five sessions from the Steinmetz trial, was analyzed with each trial as the unit, with the corresponding mouse name and session number, and information regarding the contrasts of the left and right stimuli and the mean firing rate, which was used to as a representation of neuron activity for each trial. This project started with descriptive analysis to gain information about the variables in the dataset, most notably the mean firing rate and its relationships with our contrast variables and the session. Our findings in the next sections, the inferential and predictive analysis, were most important in answering our initial questions of interest.
+
+In the inferential analysis section, our findings from the two-way Anova F test indicated that the factor effects and interaction effect were not 0, indicating that all these factors were significant predictors of mean firing rate. Since our firing rate represents the neuron activity of the mice, our question can be answered, as the interaction effect along with the factors will affect the neuron activity of the mice, even when taking the random effect session into account.  
+
+In the predicitve analysis section, various models were tested, with the chosen model using the predictors of the contrasts for the left stimuli, the contrasts for the right stimuli, the mean firing rates, the session number, and the name to maximize the area under the ROC curve. Maximizing this area with a threshold of 0.656 gives us our best model, with a specificity of 0.657 and 0.647, which indicates that our model does not contain many false negatives our positives, and can identify correctly regardless of whether the outcome was a positive or a negative one. This is an indication of a strong model as it is not skewed towards only correctly predicting one outcome. Future tests in this section could also contain a variety of predictive models aside from logistic regression.
+
+One caveat in this report could be the use of mean firing rate as the indicator for mouse neuron activity, as although it is a simple solution to the issue of varying neurons in each session, it is possible that important information is lost by simply dividing the spikes over neurons over time. Although our test with using the maximum instead of the mean proved ineffective, it is worth pursuing other ways to represent the neuron activity. One such possibility is exploring the idea that neurons could differ from each other within or across sessions. Another caveat is that this analysis does not take into account the trial numbers per session, which means that the analysis may not account for possible effects over trials in a session, such as mouse fatigue.
+
+
+# Acknowledgement {-}
+
+Jonas Kempf, Christopher Li, Katelin Jones, Gianni Spiga, Lewis Zhang
+
+# Reference {-}
+
+Steinmetz, N.A., Zatka-Haas, P., Carandini, M. et al. Distributed coding of choice, action and engagement across the mouse brain. Nature 576, 266–273 (2019). https://doi.org/10.1038/s41586-019-1787-x
+
+# Session info {-}
+
+```{r}
+sessionInfo()
+```
